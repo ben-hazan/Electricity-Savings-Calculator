@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מחשבון חיסכון בחשמל</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --background-color: #f8fafc;
+            --text-color: #1e293b;
+            --border-color: #e2e8f0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            line-height: 1.5;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 16px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 16px;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: var(--text-color);
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .rate-info {
+            text-align: center;
+            margin-bottom: 1rem;
+            padding: 6px;
+            background-color: #f0f9ff;
+            border-radius: 6px;
+            border: 1px solid #bae6fd;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+
+        .rate-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .rate-item input {
+            width: 80px;
+            text-align: center;
+            padding: 4px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+        }
+
+        .rate-item label {
+            font-size: 0.9em;
+            margin: 0;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+        }
+
+        input[type="file"],
+        input[type="number"],
+        select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 1rem;
+        }
+
+        .weekdays {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 0.8rem;
+        }
+
+        .weekday-btn {
+            background: white;
+            border: 1px solid var(--border-color);
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            flex: 1;
+            width: calc(100% / 7);
+            min-width: unset;
+            text-align: center;
+        }
+
+        .weekday-btn.selected {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .time-range {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .time-input {
+            flex: 1;
+        }
+
+        button {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            width: 100%;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        #results {
+            margin-top: 2rem;
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            white-space: pre-wrap;
+            display: none;
+            background-color: #f8fafc;
+        }
+
+        .results-highlight {
+            background-color: #e0f2fe;
+            padding: 0.5rem;
+            border-radius: 4px;
+            margin: 0.5rem 0;
+        }
+
+        .error {
+            color: #dc2626;
+            margin-top: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        @media (max-width: 480px) {
+            .weekday-btn {
+                min-width: 60px;
+                padding: 8px;
+                font-size: 0.875rem;
+            }
+            
+            .container {
+                padding: 16px;
+            }
+        }
+
+        .results-section {
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 8px;
+            margin-bottom: 8px;
+        }
+
+        .results-section h2 {
+            font-size: 1rem;
+            margin-bottom: 4px;
+            color: var(--primary-color);
+        }
+
+        .results-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 2px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .results-row:last-child {
+            border-bottom: none;
+        }
+
+        .results-label {
+            color: var(--text-color);
+            font-weight: 500;
+        }
+
+        .results-value {
+            font-family: monospace;
+            font-size: 1.1em;
+        }
+
+        .savings-highlight {
+            background: #ecfdf5;
+            border: 1px solid #6ee7b7;
+            border-radius: 6px;
+            padding: 8px;
+            margin: 8px 0;
+            text-align: center;
+        }
+
+        .savings-amount {
+            font-size: 1.3em;
+            font-weight: bold;
+            color: #059669;
+            display: block;
+            margin: 2px 0;
+        }
+
+        .chart-container {
+            background: white;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 8px;
+            margin: 8px 0;
+            height: 200px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>מחשבון חיסכון בחשמל</h1>
+        
+        <div class="rate-info">
+            <div class="rate-item">
+                <label>תעריף לקוט"ש</label>
+                <input type="number" id="electricityRate" value="54.24" step="0.01" min="0"> 
+                <span>אג'</span>
+            </div>
+            <div class="rate-item">
+                <label>תשלום הספק KVA</label>
+                <input type="number" id="kvaRate" value="10.30" step="0.01" min="0">
+                <span>₪</span>
+            </div>
+            <div class="rate-item">
+                <label>תשלום קבוע</label>
+                <input type="number" id="fixedRate" value="46.74" step="0.01" min="0">
+                <span>₪</span>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="csvFile">קובץ נתוני צריכת חשמל (CSV)</label>
+            <input type="file" id="csvFile" accept=".csv">
+        </div>
+
+        <div class="form-group">
+            <label>ימי שבוע</label>
+            <div class="weekdays" id="weekdays"></div>
+        </div>
+
+        <div class="form-group">
+            <label>שעות</label>
+            <div style="margin-bottom: 8px;">
+                <label style="display: inline-flex; align-items: center; gap: 8px; font-weight: normal;">
+                    <input type="checkbox" id="allDay" checked>
+                    כל היום (24 שעות)
+                </label>
+            </div>
+            <div class="time-range">
+                <div class="time-input">
+                    <select id="startHour"></select>
+                </div>
+                <span>עד</span>
+                <div class="time-input">
+                    <select id="endHour"></select>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="discount">אחוז הנחה</label>
+            <input type="number" id="discount" value="10" min="0" max="100">
+        </div>
+
+        <button onclick="calculateSavings()">חשב חיסכון</button>
+
+        <div id="results"></div>
+    </div>
+
+    <script>
+        let RATE_PER_KWH = 0.5424;
+        let KVA_RATE = 10.30;
+        let FIXED_RATE = 46.74;
+        const VAT_RATE = 0.18;
+        const weekdays = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+        const selectedDays = new Set([0, 1, 2, 3, 4, 5, 6]); // All days selected by default
+
+        // Initialize weekday buttons
+        const weekdaysContainer = document.getElementById('weekdays');
+        weekdays.forEach((day, index) => {
+            const btn = document.createElement('button');
+            btn.className = `weekday-btn selected`; // All buttons selected by default
+            btn.textContent = day;
+            btn.onclick = () => toggleDay(index, btn);
+            weekdaysContainer.appendChild(btn);
+        });
+
+        function toggleAllDay() {
+            const allDayCheckbox = document.getElementById('allDay');
+            const timeRange = document.querySelector('.time-range');
+            const startHour = document.getElementById('startHour');
+            const endHour = document.getElementById('endHour');
+            
+            if (allDayCheckbox.checked) {
+                timeRange.style.display = 'none';
+                startHour.value = 0;
+                endHour.value = 23;
+                startHour.disabled = true;
+                endHour.disabled = true;
+            } else {
+                timeRange.style.display = 'flex';
+                startHour.disabled = false;
+                endHour.disabled = false;
+            }
+        }
+
+        // Initialize hour dropdowns
+        const startHour = document.getElementById('startHour');
+        const endHour = document.getElementById('endHour');
+        for (let i = 0; i < 24; i++) {
+            const hour = i.toString().padStart(2, '0');
+            startHour.add(new Option(`${hour}:00`, i));
+            endHour.add(new Option(`${hour}:00`, i));
+        }
+
+        // Set initial values and state
+        startHour.value = 0;
+        endHour.value = 23;
+        document.getElementById('allDay').checked = true;
+        document.getElementById('allDay').addEventListener('change', toggleAllDay);
+        toggleAllDay(); // Call initially to set correct state
+
+        function toggleDay(index, btn) {
+            if (selectedDays.has(index)) {
+                selectedDays.delete(index);
+                btn.classList.remove('selected');
+            } else {
+                selectedDays.add(index);
+                btn.classList.add('selected');
+            }
+        }
+
+        function calculateSavings() {
+            const fileInput = document.getElementById('csvFile');
+            const discountInput = document.getElementById('discount');
+            const resultsDiv = document.getElementById('results');
+            const isAllDay = document.getElementById('allDay').checked;
+
+            if (!fileInput.files.length) {
+                alert('נא לבחור קובץ CSV');
+                return;
+            }
+
+            const discount = parseFloat(discountInput.value);
+            if (isNaN(discount) || discount <= 0 || discount >= 100) {
+                alert('נא להזין אחוז הנחה תקין (בין 0 ל-100)');
+                return;
+            }
+
+            const start = isAllDay ? 0 : parseInt(startHour.value);
+            const end = isAllDay ? 24 : parseInt(endHour.value);
+            
+            if (selectedDays.size === 0) {
+                alert('נא לבחור לפחות יום אחד');
+                return;
+            }
+
+            Papa.parse(fileInput.files[0], {
+                skipEmptyLines: true,
+                complete: function(results) {
+                    try {
+                        const data = processCSV(results.data);
+                        const savings = analyzeSavings(data);
+                        displayResults(savings);
+                    } catch (error) {
+                        alert('שגיאה בעיבוד הקובץ: ' + error.message);
+                    }
+                },
+                error: function(error) {
+                    alert('שגיאה בקריאת הקובץ: ' + error.message);
+                }
+            });
+        }
+
+        function processCSV(data) {
+            // Skip header rows
+            const startIndex = data.findIndex(row => row.includes('תאריך'));
+            if (startIndex === -1) throw new Error('מבנה קובץ לא תקין');
+
+            const processedData = data.slice(startIndex + 2).map(row => ({
+                date: row[0],
+                time: row[1],
+                usage: parseFloat(row[2].replace(',', '.'))
+            })).filter(row => !isNaN(row.usage));
+
+            // Create hourly aggregation
+            const quarterHourlyUsage = Array(96).fill(0); // 24*4 quarter hours
+            processedData.forEach(row => {
+                const [hours, minutes] = row.time.split(':').map(Number);
+                const quarterHourIndex = (hours * 4) + Math.floor(minutes / 15);
+                quarterHourlyUsage[quarterHourIndex] += row.usage;
+            });
+
+            return {
+                detailed: processedData,
+                quarterHourly: quarterHourlyUsage
+            };
+        }
+
+        function analyzeSavings(data) {
+            const totalUsage = data.detailed.reduce((sum, row) => sum + row.usage, 0);
+            const isAllDay = document.getElementById('allDay').checked;
+            const startHourVal = parseInt(startHour.value);
+            const endHourVal = parseInt(endHour.value);
+            
+            const specifiedUsage = data.detailed.filter(row => {
+                if (selectedDays.size === 7 && isAllDay) {
+                    return true;
+                }
+                
+                const date = new Date(row.date.split('/').reverse().join('-'));
+                const weekday = (date.getDay() + 6) % 7;
+                const hour = parseInt(row.time.split(':')[0]);
+                
+                const isInTimeRange = startHourVal <= endHourVal ?
+                    (hour >= startHourVal && hour < endHourVal) :
+                    (hour >= startHourVal || hour < endHourVal); // Night hours case
+                
+                return selectedDays.has(weekday) && isInTimeRange;
+            }).reduce((sum, row) => sum + row.usage, 0);
+
+            const discount = parseFloat(document.getElementById('discount').value);
+            const savingsKwh = specifiedUsage * (discount / 100);
+            const energySavings = savingsKwh * RATE_PER_KWH;
+            const kvaSavings = KVA_RATE * (discount / 100);
+            const fixedSavings = FIXED_RATE * (discount / 100);
+            
+            // Calculate total savings including VAT
+            const totalSavingsBeforeVAT = energySavings + kvaSavings + fixedSavings;
+            const monetarySavings = totalSavingsBeforeVAT * (1 + VAT_RATE);
+
+            // Calculate savings per quarter hour
+            const quarterHourlySavings = data.quarterHourly.map((usage, index) => {
+                const hour = Math.floor(index / 4);
+                
+                if (isAllDay) return usage * (discount / 100);
+                
+                const isInTimeRange = startHourVal <= endHourVal ?
+                    (hour >= startHourVal && hour < endHourVal) :
+                    (hour >= startHourVal || hour < endHourVal); // Night hours case
+                
+                return isInTimeRange ? usage * (discount / 100) : 0;
+            });
+
+            return {
+                totalUsage,
+                specifiedUsage,
+                percentageOfTotal: (specifiedUsage / totalUsage) * 100,
+                savingsKwh,
+                monetarySavings,
+                selectedDays: Array.from(selectedDays),
+                hours: [startHourVal, endHourVal],
+                discount,
+                quarterHourlyData: {
+                    original: data.quarterHourly,
+                    savings: quarterHourlySavings
+                }
+            };
+        }
+
+        function displayResults(results) {
+            const daysStr = results.selectedDays.map(d => weekdays[d]).join(', ');
+            const resultsDiv = document.getElementById('results');
+            
+            resultsDiv.innerHTML = `
+                <div class="savings-highlight">
+                    <div>החיסכון השנתי הצפוי שלך (כולל מע"מ)</div>
+                    <span class="savings-amount">₪${results.monetarySavings.toFixed(2)}</span>
+                    <div>חיסכון של ${results.savingsKwh.toFixed(2)} קוט"ש</div>
+                </div>
+
+                <div class="chart-container">
+                    <canvas id="usageChart"></canvas>
+                </div>
+
+                <div class="results-section">
+                    <div class="results-row">
+                        <span class="results-label">סך צריכה שנתית</span>
+                        <span class="results-value">${results.totalUsage.toFixed(2)} קוט"ש</span>
+                    </div>
+                    <div class="results-row">
+                        <span class="results-label">צריכה בזמנים שהוגדרו</span>
+                        <span class="results-value">${results.specifiedUsage.toFixed(2)} קוט"ש (${results.percentageOfTotal.toFixed(1)}%)</span>
+                    </div>
+                    <div class="results-row">
+                        <span class="results-label">תעריף והנחה</span>
+                        <span class="results-value">${(RATE_PER_KWH * 100).toFixed(2)} אג' / ${results.discount}%</span>
+                    </div>
+                    <div class="results-row">
+                        <span class="results-label">זמנים</span>
+                        <span class="results-value">${results.hours[0]}:00-${results.hours[1]}:00, ${daysStr}</span>
+                    </div>
+                </div>
+            `;
+            
+            resultsDiv.style.display = 'block';
+
+            // Create the chart
+            const ctx = document.getElementById('usageChart').getContext('2d');
+            const labels = Array(96).fill(0).map((_, i) => {
+                const hour = Math.floor(i / 4);
+                const minute = (i % 4) * 15;
+                return `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+            });
+
+            const { original, savings } = results.quarterHourlyData;
+            const remainingUsage = original.map((usage, i) => usage - savings[i]);
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'צריכה לאחר חיסכון',
+                            data: remainingUsage,
+                            backgroundColor: '#3b82f6',
+                            stack: 'stack0',
+                        },
+                        {
+                            label: 'חיסכון',
+                            data: savings,
+                            backgroundColor: '#22c55e',
+                            stack: 'stack0',
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'צריכת חשמל יומית ממוצעת לפי רבעי שעה',
+                            font: {
+                                size: 16
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            stacked: true,
+                            ticks: {
+                                maxRotation: 0,
+                                autoSkip: true,
+                                maxTicksLimit: 24
+                            }
+                        },
+                        y: {
+                            stacked: true,
+                            title: {
+                                display: true,
+                                text: 'קוט"ש'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Add after other initialization code
+        const rateInput = document.getElementById('electricityRate');
+        const kvaRateInput = document.getElementById('kvaRate');
+        const fixedRateInput = document.getElementById('fixedRate');
+
+        rateInput.addEventListener('change', function() {
+            const newRate = parseFloat(this.value);
+            if (!isNaN(newRate) && newRate > 0) {
+                RATE_PER_KWH = newRate / 100; // Convert agorot to NIS
+            } else {
+                alert('נא להזין תעריף תקין');
+                this.value = '54.24';
+                RATE_PER_KWH = 0.5424;
+            }
+        });
+
+        kvaRateInput.addEventListener('change', function() {
+            const newRate = parseFloat(this.value);
+            if (!isNaN(newRate) && newRate > 0) {
+                KVA_RATE = newRate;
+            } else {
+                alert('נא להזין תעריף תקין');
+                this.value = '10.30';
+                KVA_RATE = 10.30;
+            }
+        });
+
+        fixedRateInput.addEventListener('change', function() {
+            const newRate = parseFloat(this.value);
+            if (!isNaN(newRate) && newRate > 0) {
+                FIXED_RATE = newRate;
+            } else {
+                alert('נא להזין תעריף תקין');
+                this.value = '46.74';
+                FIXED_RATE = 46.74;
+            }
+        });
+    </script>
+</body>
+</html>
