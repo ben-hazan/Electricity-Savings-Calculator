@@ -2,7 +2,7 @@
 מחשבון לחיסכון בחשמל לפני נתוני צריכה שנתית
 
 ## Direct Link to Calculator
-
+[Click here to open the calculator](https://amused-magnificent-grasshopper.glitch.me/)
 
 ## About
 This calculator helps you estimate potential savings on your electricity bill based on your usage patterns.
