@@ -1,5 +1,5 @@
 # Electricity-Savings-Calculator
-מחשבון לחיסכון בחשמל לפני נתוני צריכה שנתית
+מחשבון לחיסכון בחשמל לפי נתוני צריכה שנתית
 
 ## Direct Link to Calculator
 [Click here to open the calculator](https://amused-magnificent-grasshopper.glitch.me/)
